@@ -1,6 +1,5 @@
-// LoginPage.js
-import { useCallback, useEffect, useState } from "react";
-import { Container, Row, Col, Form, Button } from "react-bootstrap";
+import { useCallback, useEffect, useReducer, useState } from "react";
+import { Container, Row, Col, Form, Button, Spinner } from "react-bootstrap";
 import Particles from "react-tsparticles";
 import { loadFull } from "tsparticles";
 import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
@@ -10,10 +9,16 @@ import "react-toastify/dist/ReactToastify.css";
 import axios from "axios";
 import { loginAPI } from "../../utils/ApiRequest";
 
+const initialState = { email: "", password: "" };
+
+const reducer = (state, action) => {
+  return { ...state, [action.field]: action.value };
+};
+
 const Login = () => {
   const navigate = useNavigate();
-
   const [loading, setLoading] = useState(false);
+  const [state, dispatch] = useReducer(reducer, initialState);
 
   useEffect(() => {
     if (localStorage.getItem("user")) {
@@ -21,192 +26,125 @@ const Login = () => {
     }
   }, [navigate]);
 
-  const [values, setValues] = useState({
-    email: "",
-    password: "",
-  });
-
   const toastOptions = {
     position: "bottom-right",
     autoClose: 2000,
-    hideProgressBar: false,
-    closeOnClick: true,
-    pauseOnHover: false,
-    draggable: true,
-    progress: undefined,
     theme: "dark",
   };
 
   const handleChange = (e) => {
-    setValues({ ...values, [e.target.name]: e.target.value });
+    dispatch({ field: e.target.name, value: e.target.value });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const { email, password } = state;
 
-    const { email, password } = values;
+    if (!email || !password) {
+      toast.error("Please fill all fields", toastOptions);
+      return;
+    }
 
     setLoading(true);
+    try {
+      const { data } = await axios.post(loginAPI, { email, password });
 
-    const { data } = await axios.post(loginAPI, {
-      email,
-      password,
-    });
-
-    if (data.success === true) {
-      localStorage.setItem("user", JSON.stringify(data.user));
-      navigate("/");
-      toast.success(data.message, toastOptions);
-      setLoading(false);
-    } else {
-      toast.error(data.message, toastOptions);
+      if (data.success) {
+        localStorage.setItem("user", JSON.stringify(data.user));
+        toast.success("Login Successful! Redirecting...", toastOptions);
+        setTimeout(() => navigate("/home"), 1500);
+      } else {
+        toast.error(data.message, toastOptions);
+      }
+    } catch (error) {
+      toast.error("Something went wrong. Please try again.", toastOptions);
+    } finally {
       setLoading(false);
     }
   };
 
   const particlesInit = useCallback(async (engine) => {
-    // console.log(engine);
     await loadFull(engine);
   }, []);
 
-  const particlesLoaded = useCallback(async (container) => {
-    // await console.log(container);
-  }, []);
-
   return (
-    <div style={{ position: "relative", overflow: "hidden" }}>
+    <div style={styles.loginPage}>
       <Particles
         id="tsparticles"
         init={particlesInit}
-        loaded={particlesLoaded}
         options={{
-          background: {
-            color: {
-              value: "#000",
-            },
-          },
-          fpsLimit: 60,
+          background: { color: { value: "#1b1b1b" } },
           particles: {
-            number: {
-              value: 200,
-              density: {
-                enable: true,
-                value_area: 800,
-              },
-            },
-            color: {
-              value: "#ffcc00",
-            },
-            shape: {
-              type: "circle",
-            },
-            opacity: {
-              value: 0.5,
-              random: true,
-            },
-            size: {
-              value: 3,
-              random: { enable: true, minimumValue: 1 },
-            },
-            links: {
-              enable: false,
-            },
-            move: {
-              enable: true,
-              speed: 2,
-            },
-            life: {
-              duration: {
-                sync: false,
-                value: 3,
-              },
-              count: 0,
-              delay: {
-                random: {
-                  enable: true,
-                  minimumValue: 0.5,
-                },
-                value: 1,
-              },
-            },
+            number: { value: 100, density: { enable: true, value_area: 800 } },
+            color: { value: "#ffcc00" },
+            shape: { type: "circle" },
+            move: { enable: true, speed: 2 },
           },
           detectRetina: true,
         }}
-        style={{
-          position: "absolute",
-          zIndex: -1,
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-        }}
+        style={styles.particlesBg}
       />
-      <Container
-        className="mt-5"
-        style={{ position: "relative", zIndex: "2 !important" }}
-      >
+
+      <Container style={styles.loginContainer}>
         <Row>
           <Col md={{ span: 6, offset: 3 }}>
-            <h1 className="text-center mt-5">
-              <AccountBalanceWalletIcon
-                sx={{ fontSize: 40, color: "white" }}
-                className="text-center"
-              />
-            </h1>
-            <h2 className="text-white text-center ">Login</h2>
-            <Form>
-              <Form.Group controlId="formBasicEmail" className="mt-3">
-                <Form.Label className="text-white">Email address</Form.Label>
-                <Form.Control
-                  type="email"
-                  placeholder="Enter email"
-                  name="email"
-                  onChange={handleChange}
-                  value={values.email}
-                />
-              </Form.Group>
+            <div style={styles.loginCard}>
+              <h1 className="text-center">
+                <AccountBalanceWalletIcon sx={{ fontSize: 50, color: "#ffcc00" }} />
+              </h1>
+              <h2 style={{ color: "white", textAlign: "center" }}>Welcome Back</h2>
+              <p style={{ color: "#ccc", textAlign: "center" }}>Login to your account</p>
 
-              <Form.Group controlId="formBasicPassword" className="mt-3">
-                <Form.Label className="text-white">Password</Form.Label>
-                <Form.Control
-                  type="password"
-                  name="password"
-                  placeholder="Password"
-                  onChange={handleChange}
-                  value={values.password}
-                />
-              </Form.Group>
-              <div
-                style={{
-                  width: "100%",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexDirection: "column",
-                }}
-                className="mt-4"
-              >
-                <Link to="/forgotPassword" className="text-white lnk">
-                  Forgot Password?
-                </Link>
+              <Form onSubmit={handleSubmit}>
+                <Form.Group className="mt-3">
+                  <Form.Label style={{ color: "white" }}>Email address</Form.Label>
+                  <Form.Control
+                    type="email"
+                    placeholder="Enter your email"
+                    name="email"
+                    onChange={handleChange}
+                    value={state.email}
+                    required
+                    style={styles.inputField}
+                  />
+                </Form.Group>
+
+                <Form.Group className="mt-3">
+                  <Form.Label style={{ color: "white" }}>Password</Form.Label>
+                  <Form.Control
+                    type="password"
+                    name="password"
+                    placeholder="Enter password"
+                    onChange={handleChange}
+                    value={state.password}
+                    required
+                    style={styles.inputField}
+                  />
+                </Form.Group>
+
+                <div className="text-center mt-3">
+                  <Link to="/forgotPassword" style={styles.forgotLink}>
+                    Forgot Password?
+                  </Link>
+                </div>
 
                 <Button
                   type="submit"
-                  className=" text-center mt-3 btnStyle"
-                  onClick={!loading ? handleSubmit : null}
+                  style={styles.loginBtn}
                   disabled={loading}
+                  className="mt-3"
                 >
-                  {loading ? "Signin…" : "Login"}
+                  {loading ? <Spinner animation="border" size="sm" /> : "Login"}
                 </Button>
 
-                <p className="mt-3" style={{ color: "#9d9494" }}>
+                <p className="mt-3 text-center" style={{ color: "#ccc" }}>
                   Don't Have an Account?{" "}
-                  <Link to="/register" className="text-white lnk">
+                  <Link to="/register" style={{ color: "#ffcc00" }}>
                     Register
                   </Link>
                 </p>
-              </div>
-            </Form>
+              </Form>
+            </div>
           </Col>
         </Row>
         <ToastContainer />
@@ -215,4 +153,56 @@ const Login = () => {
   );
 };
 
+// Embedded CSS as JS object
+const styles = {
+  loginPage: {
+    position: "relative",
+    height: "100vh",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    background: "linear-gradient(135deg, #1b1b1b, #252525)",
+  },
+  particlesBg: {
+    position: "absolute",
+    zIndex: -1,
+    width: "100%",
+    height: "100%",
+  },
+  loginContainer: {
+    zIndex: 1,
+  },
+  loginCard: {
+    background: "rgba(255, 255, 255, 0.1)",
+    backdropFilter: "blur(10px)",
+    padding: "2rem",
+    borderRadius: "15px",
+    boxShadow: "0 4px 30px rgba(0, 0, 0, 0.1)",
+    maxWidth: "400px",
+    margin: "auto",
+    textAlign: "center",
+  },
+  inputField: {
+    background: "rgba(255, 255, 255, 0.2)",
+    border: "none",
+    color: "white",
+  },
+  forgotLink: {
+    textDecoration: "none",
+    fontSize: "14px",
+    color: "#ccc",
+  },
+  loginBtn: {
+    width: "100%",
+    background: "#ffcc00",
+    border: "none",
+    padding: "10px",
+    fontSize: "18px",
+    fontWeight: "bold",
+    borderRadius: "10px",
+    transition: "0.3s",
+  },
+};
+
+// Export the component
 export default Login;
