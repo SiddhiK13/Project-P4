@@ -99,7 +99,7 @@ const Register = () => {
               </h1>
               <h2 style={{ color: "#FFD700", textAlign: "center" }}>Sign Up</h2>
               <p style={{ color: "#B2B2B2", textAlign: "center" }}>
-                Join the Expense Management System today!
+                Join the Finance Management System today!
               </p>
 
               <Form onSubmit={handleSubmit}>
